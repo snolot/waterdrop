@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>water droplet</title>
+	<style type="text/css">
+		body, html{
+			margin: 0px;
+		}
+
+		input{
+			position: absolute;
+			margin: 10px;
+			left: 10px;
+			top:10px;
+		}
+	</style>
+</head>
+<body>
+	<input type="button" id="btn" value="Rain">
+
+	<script type="module">
+		import * as THREE from './libs/build/three.module.js';
+		import { OrbitControls } from './libs/examples/jsm/controls/OrbitControls.js';
+		import { GLTFLoader } from './libs/examples/jsm/loaders/GLTFLoader.js';
+		import { TWEEN } from './libs/examples/jsm/libs/tween.module.min.js';
+		
+		import { ScreenShake } from './src/screen_shake.js';
+		import { CameraWaterDrop} from './libs/CameraWaterDrop/js/CameraWaterDrop.js';
+
+		const loader = new GLTFLoader();
+
+		const clock = new THREE.Clock();
+
+		let camera, scene, renderer, mesh, material, obj;
+		let cwd, shake, model, light;
+
+		const update = () => {
+			TWEEN.update();
+			requestAnimationFrame(update);
+			const delta = clock.getDelta();
+			
+			cwd.update(renderer, delta, [obj]);
+			shake.update(camera);
+
+			renderer.render(scene, camera);
+		};
+
+		
+		const initScene = () => {
+			obj = new THREE.Object3D();
+			scene.add(obj);
+
+			let cube = new THREE.Mesh(new THREE.BoxBufferGeometry(.3,.3,.3), new THREE.MeshStandardMaterial({color:0xCCCCCC}));
+
+			for(let i=0; i<30; i++){
+				let c = cube.clone();
+				c.material= new THREE.MeshStandardMaterial({color:Math.random() * 0xffffff});
+				c.position.set(6*Math.random()-3,  2*Math.random()-1, 0);
+				c.rotateX(2*Math.PI*Math.random());
+				c.rotateY(2*Math.PI*Math.random());
+				c.rotateZ(2*Math.PI*Math.random());
+
+				obj.add(c); 
+			}
+
+			//camera.lookAt(obj.position);
+		};
+
+		const init = async() => {
+			camera = new THREE.PerspectiveCamera(60,innerWidth/innerHeight, 1, 1000);
+			scene = new THREE.Scene();
+			camera.position.z = 5 ;
+			
+
+			renderer = new THREE.WebGLRenderer({
+				antialias:false,
+				alpha:false
+			});
+
+			renderer.setSize(innerWidth, innerHeight);
+			renderer.toneMappingExposure = 1;
+            renderer.physicallyCorrectLights = true;
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            //renderer.setPixelRatio(window.devicePixelRatio);
+  			scene.fog = new THREE.FogExp2(0x4375BC, 0.03);
+  			renderer.setClearColor(scene.fog.color);
+
+			document.body.appendChild(renderer.domElement);
+			//camera.lookAt(scene.position);
+
+			scene.add(new THREE.AmbientLight());
+
+			light = new THREE.SpotLight( 0xffffff );
+	        light.position.set( 30, 30, 40 );
+	        light.target.position.set( 0, 0, 0 );
+
+	        light.castShadow = true;
+
+	        light.shadow.camera.near = 10;
+	        light.shadow.camera.far = 100;//camera.far;
+	        light.shadow.camera.fov = 30;
+
+	        light.shadowMapBias = 0.0039;
+	        light.shadowMapDarkness = 0.5;
+	        light.shadow.mapSize.width = 1024;
+	        light.shadow.mapSize.height = 1024;
+
+	        let dirLight = new THREE.DirectionalLight( 0xffcccc, .75 );
+	  		dirLight.name = 'Dir. Light';
+	  		dirLight.position.set( 3, 30, 27);
+	  		dirLight.castShadow = true;
+	  		dirLight.shadow.camera.near = 0.01;
+	  		dirLight.shadow.camera.far = 500;
+	  		dirLight.shadow.camera.right = 20;
+	  		dirLight.shadow.camera.left = - 20;
+	  		dirLight.shadow.camera.top	= 20;
+	  		dirLight.shadow.camera.bottom = - 20;
+	  		dirLight.shadow.mapSize.width = 1024;
+	  		dirLight.shadow.mapSize.height = 1024;
+	  		dirLight.shadow.radius = 4;
+	  		dirLight.shadow.bias = -0.0005;
+
+	        scene.add( dirLight );
+
+	  		shake = ScreenShake();
+
+			
+			
+			cwd = CameraWaterDrop({
+				width:innerWidth,
+				height:innerHeight
+			});
+
+			await cwd.init(camera, scene, renderer);
+
+			document.querySelector('#btn').onclick = () => {
+				cwd.splashScreen();
+
+				shake.shake(camera,new THREE.Vector3(0,0,-.6),  800);
+			}
+
+			initScene();
+			update()
+			/*loader.load('./rafting.glb', gltf => {
+				model = gltf.scene;
+				model.scale.set(.2,.2,.2)
+				model.position.y -= .5;
+				//camera.lookAt(scene.position);
+
+				scene.add(model);
+				update();
+			});*/
+
+			
+		};
+
+		init();
+
+	</script>
+</body>
+</html>
